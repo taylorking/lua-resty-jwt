@@ -50,6 +50,7 @@ int i2d_RSA(RSA *a, unsigned char **out);
 // X509
 typedef struct x509_st X509;
 X509 *PEM_read_bio_X509(BIO *bp, X509 **x, pem_password_cb *cb, void *u);
+EVP_PKEY *PEM_read_bio_PUBKEY(BIO *bp, EVP_PKEY **x, pem_password_cb *cb, void *u);
 EVP_PKEY *      X509_get_pubkey(X509 *x);
 void X509_free(X509 *a);
 void EVP_PKEY_free(EVP_PKEY *key);
@@ -257,7 +258,11 @@ function Cert.new(self, payload)
         if _C.BIO_puts(bio, payload) < 0 then
             return _err()
         end
-        x509 = _C.PEM_read_bio_X509(bio, nil, nil, nil)
+        if payload:find('PUBLIC KEY-----') then
+          self.evp_pkey = _C.PEM_read_bio_PUBKEY(bio, nil, nil, nil)
+        else
+          x509 = _C.PEM_read_bio_X509(bio, nil, nil, nil)
+        end
     else
         if _C.BIO_write(bio, payload, #payload) < 0 then
             return _err()
@@ -307,6 +312,9 @@ end
 --- Retrieve the public key from the CERT
 -- @returns An OpenSSL EVP PKEY object representing the public key
 function Cert.get_public_key(self)
+    if self.evp_pkey then
+      return self.evp_pkey
+    end
     local evp_pkey = _C.X509_get_pubkey(self.x509)
     if not evp_pkey then
         return _err()
