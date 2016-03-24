@@ -275,6 +275,9 @@ function Cert.new(self, payload)
     if x509 then
         ffi.gc(x509, _C.X509_free)
     end
+    if self.evp_pkey then
+      ffi.gc(self.evp_pkey, _C.EVP_PKEY_free)
+    end
     self.x509 = x509
     return self, nil
 end
